@@ -111,6 +111,8 @@ def get_birth_date(name: str) -> str:
 
     return match.group("birth")
 
+# calling code
+
 def get_birth_place(name: str) -> str:
     """Gets the birth place of the given person
 
@@ -142,22 +144,33 @@ def get_successor(name: str) -> str:
     """
     infobox_text = clean_text(get_first_infobox_text(get_page_html(name)))
     
-    # Refined regex pattern to capture only the first and last name of the successor
-    pattern = r"(?:Succeeded by|Successor)[\s:]*(\w+ \w+[\w\s]*)"
+    # Refined regex pattern to capture the successor's name, handling wiki links
+    pattern = r"(?:Succeeded by|Successor)[\s:]*[\[\(]?\s*(?:[A-Za-z'-]+\s+)?([A-Za-z'-]+)(?:\]\)|\s*\])?(?:,|\s|$)"
+    error_text = "Page infobox has no successor information"
     
-    match = get_match(infobox_text, pattern)
+    match = get_match(infobox_text, pattern, error_text)
     
-    if match:
-        # Get the successor's name
-        successor_name = match.group(1).strip()
-        
-        # Split the name and title, only keep the first two words (first and last name)
-        name_parts = re.split(r'\W+', successor_name)  # Split by non-word characters
-        
-        # Return the first two parts (first and last name)
-        return " ".join(name_parts[:2]) if len(name_parts) >= 2 else successor_name
+    return match.group(1).strip()
+
+def get_calling_code(country_name: str) -> str:
+    """Gets the calling code of the given country from the Wikipedia infobox.
+
+    Args:
+        country_name - name of the country
+
+    Returns:
+        calling code of the country (e.g., '+1')
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(country_name)))
     
-    return None
+    # Regex pattern to capture the calling code (e.g., +1, +44)
+    pattern = r"(?:Calling code|Telephone code)[\s:]*(\+\d{1,3})(?:,|\s|$)"
+    error_text = "Page infobox has no calling code information"
+    
+    match = get_match(infobox_text, pattern, error_text)
+    
+    return match.group(1).strip()
+
 
 # below are a set of actions. Each takes a list argument and returns a list of answers
 # according to the action and the argument. It is important that each function returns a
@@ -209,6 +222,17 @@ def successor(matches: List[str]) -> List[str]:
     """
     return [get_successor(" ".join(matches))]
 
+def calling_code(matches: List[str]) ->  List[str]:
+    """Returns the calling code of a named country in matches.
+
+    Args: 
+        matches - match from pattern of country
+
+    Returns: 
+        calling code of named country
+    """
+    return [get_calling_code(" ".join(matches))]
+
 
 # dummy argument is ignored and doesn't matter
 def bye_action(dummy: List[str]) -> None:
@@ -227,6 +251,7 @@ pa_list: List[Tuple[Pattern, Action]] = [
     ("what is the polar radius of %".split(), polar_radius),
     ("where was % born".split(), birth_place),
     ("who succeeded %".split(), successor),
+    ("what is the calling code of %".split(), calling_code), 
     (["bye"], bye_action),
 ]
 
