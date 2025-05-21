@@ -111,6 +111,53 @@ def get_birth_date(name: str) -> str:
 
     return match.group("birth")
 
+def get_birth_place(name: str) -> str:
+    """Gets the birth place of the given person
+
+    Args:
+        name - name of the person
+
+    Returns:
+        birth place of the given person
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(name)))
+    
+    # Updated pattern to capture the birth place in the form of "City, State, Country"
+    pattern = r"born.*?([A-Za-z\s]+, [A-Za-z]+, U\.S\.)"
+    
+    error_text = "Page infobox has no birth place information in the expected format"
+    
+    match = get_match(infobox_text, pattern, error_text)
+    
+    return match.group(1).strip()
+
+def get_successor(name: str) -> str:
+    """Gets the successor of the given mayor from the Wikipedia infobox.
+
+    Args:
+        name - name of the mayor
+
+    Returns:
+        name of the successor, or None if not found
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(name)))
+    
+    # Refined regex pattern to capture only the first and last name of the successor
+    pattern = r"(?:Succeeded by|Successor)[\s:]*(\w+ \w+[\w\s]*)"
+    
+    match = get_match(infobox_text, pattern)
+    
+    if match:
+        # Get the successor's name
+        successor_name = match.group(1).strip()
+        
+        # Split the name and title, only keep the first two words (first and last name)
+        name_parts = re.split(r'\W+', successor_name)  # Split by non-word characters
+        
+        # Return the first two parts (first and last name)
+        return " ".join(name_parts[:2]) if len(name_parts) >= 2 else successor_name
+    
+    return None
 
 # below are a set of actions. Each takes a list argument and returns a list of answers
 # according to the action and the argument. It is important that each function returns a
@@ -140,6 +187,28 @@ def polar_radius(matches: List[str]) -> List[str]:
     """
     return [get_polar_radius(matches[0])]
 
+def birth_place(matches: List[str]) -> List[str]:
+    """Returns birth place of named person in matches
+
+    Args:
+        matches - match from pattern of person's name to find birth place of
+
+    Returns:
+        birth place of named person
+    """
+    return [get_birth_place(" ".join(matches))]
+
+def successor(matches: List[str]) -> List[str]:
+    """Returns the successor of the named politician in matches.
+
+    Args:
+        matches - match from pattern of politician's name to find successor of
+
+    Returns:
+        successor of the named politician
+    """
+    return [get_successor(" ".join(matches))]
+
 
 # dummy argument is ignored and doesn't matter
 def bye_action(dummy: List[str]) -> None:
@@ -156,6 +225,8 @@ Action = Callable[[List[str]], List[Any]]
 pa_list: List[Tuple[Pattern, Action]] = [
     ("when was % born".split(), birth_date),
     ("what is the polar radius of %".split(), polar_radius),
+    ("where was % born".split(), birth_place),
+    ("who succeeded %".split(), successor),
     (["bye"], bye_action),
 ]
 
