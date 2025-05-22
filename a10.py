@@ -68,7 +68,7 @@ def get_match(
     Returns:
         text that matches
     """
-    p = re.compile(pattern, re.DOTALL | re.IGNORECASE)
+    p = re.compile(pattern, re.DOTALL | re.IGNORECASE | re.MULTILINE)
     match = p.search(text)
 
     if not match:
@@ -133,43 +133,41 @@ def get_birth_place(name: str) -> str:
     
     return match.group(1).strip()
 
-def get_successor(name: str) -> str:
-    """Gets the successor of the given mayor from the Wikipedia infobox.
-
-    Args:
-        name - name of the mayor
-
-    Returns:
-        name of the successor, or None if not found
-    """
-    infobox_text = clean_text(get_first_infobox_text(get_page_html(name)))
-    
-    # Refined regex pattern to capture the successor's name, handling wiki links
-    pattern = r"(?:Succeeded by|Successor)[\s:]*[\[\(]?\s*(?:[A-Za-z'-]+\s+)?([A-Za-z'-]+)(?:\]\)|\s*\])?(?:,|\s|$)"
-    error_text = "Page infobox has no successor information"
-    
-    match = get_match(infobox_text, pattern, error_text)
-    
-    return match.group(1).strip()
-
-def get_calling_code(country_name: str) -> str:
-    """Gets the calling code of the given country from the Wikipedia infobox.
+def get_capital(country_name: str) -> str:
+    """Gets the capital of a given country from Wikipedia and prints the extracted infobox for debugging.
 
     Args:
         country_name - name of the country
 
     Returns:
-        calling code of the country (e.g., '+1')
+        Capital city of the given country
     """
     infobox_text = clean_text(get_first_infobox_text(get_page_html(country_name)))
-    
-    # Regex pattern to capture the calling code (e.g., +1, +44)
-    pattern = r"(?:Calling code|Telephone code)[\s:]*(\+\d{1,3})(?:,|\s|$)"
-    error_text = "Page infobox has no calling code information"
-    
+
+    # Regex pattern to extract the capital city
+    pattern = r"Capital(?:\s*(?:and largest city)?)(?P<capital>[A-Za-z\s'(),\-\.]+)(?=\s*[0-9]|\s*\[|$)"
+    error_text = "Page infobox has no capital information"
     match = get_match(infobox_text, pattern, error_text)
-    
-    return match.group(1).strip()
+    return match.group("capital")
+
+def get_mean_density(planet_name: str) -> str:
+    """Gets the mean density of the given planet from its Wikipedia page
+
+    Args:
+        planet_name - name of the planet to get density of
+
+    Returns:
+        mean density of the given planet
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(planet_name)))
+
+    # Regex pattern to match mean density in the form: "Density: 5.51 g/cm³" or similar
+    pattern = r"(?i)(?:mean\s*density|density)\s*[:\-]?\s*(?P<density>[0-9.]+(?:\s*g\/cm³)?)"
+
+    error_text = "Page infobox has no mean density information"
+    match = get_match(infobox_text, pattern, error_text)
+
+    return match.group("density").strip()
 
 
 # below are a set of actions. Each takes a list argument and returns a list of answers
@@ -211,28 +209,16 @@ def birth_place(matches: List[str]) -> List[str]:
     """
     return [get_birth_place(" ".join(matches))]
 
-def successor(matches: List[str]) -> List[str]:
-    """Returns the successor of the named politician in matches.
+def capital(matches: List[str]) -> List[str]:
+    """Returns the capital of the given country.
 
     Args:
-        matches - match from pattern of politician's name to find successor of
+        matches - match from pattern for country to find capital of
 
     Returns:
-        successor of the named politician
+        Capital city of the country
     """
-    return [get_successor(" ".join(matches))]
-
-def calling_code(matches: List[str]) ->  List[str]:
-    """Returns the calling code of a named country in matches.
-
-    Args: 
-        matches - match from pattern of country
-
-    Returns: 
-        calling code of named country
-    """
-    return [get_calling_code(" ".join(matches))]
-
+    return [get_capital(" ".join(matches))]
 
 # dummy argument is ignored and doesn't matter
 def bye_action(dummy: List[str]) -> None:
@@ -250,14 +236,13 @@ pa_list: List[Tuple[Pattern, Action]] = [
     ("when was % born".split(), birth_date),
     ("what is the polar radius of %".split(), polar_radius),
     ("where was % born".split(), birth_place),
-    ("who succeeded %".split(), successor),
-    ("what is the calling code of %".split(), calling_code), 
+    ("what is the capital of %".split(), capital),
     (["bye"], bye_action),
 ]
 
 
 def search_pa_list(src: List[str]) -> List[str]:
-    """Takes source, finds matching pattern and calls corresponding action. If it finds
+    """Takes source, finds matching pattern and calls cwhorresponding action. If it finds
     a match but has no answers it returns ["No answers"]. If it finds no match it
     returns ["I don't understand"].
 
