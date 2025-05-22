@@ -220,6 +220,17 @@ def capital(matches: List[str]) -> List[str]:
     """
     return [get_capital(" ".join(matches))]
 
+def mean_density(matches: List[str]) -> List[str]:
+    """Returns mean density of planet in matches
+
+    Args:
+        matches - match from pattern of planet to find mean density of
+
+    Returns:
+        mean density of planet
+    """
+    return [get_mean_density(matches[0])]  # This calls get_mean_density and returns the result
+
 # dummy argument is ignored and doesn't matter
 def bye_action(dummy: List[str]) -> None:
     raise KeyboardInterrupt
@@ -237,6 +248,7 @@ pa_list: List[Tuple[Pattern, Action]] = [
     ("what is the polar radius of %".split(), polar_radius),
     ("where was % born".split(), birth_place),
     ("what is the capital of %".split(), capital),
+    ("what is the mean density of %".split(), mean_density),
     (["bye"], bye_action),
 ]
 
